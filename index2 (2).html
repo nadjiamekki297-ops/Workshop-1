@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C Unlocked One · Workshop</title>
+
+<style>
+  /* ===== Couleurs ===== */
+  :root {
+    --wine: #7F011F;      /* Wine Red */
+    --sand: #F5EBD0;      /* Light Sand */
+    --orange: #ff7a2f;    /* accent néon */
+  }
+  * { box-sizing: border-box; }
+
+  /* Fond rouge */
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 30%, #a3032a, #7F011F 60%, #4d0112);
+    color: var(--sand);
+    font-family: "Segoe UI", Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 36px 28px;
+    overflow-x: hidden;
+  }
+
+  /* Canvas : arbre animé derrière la carte */
+  #bg { position: fixed; inset: 0; z-index: 0; }
+
+  .wrap { position: relative; z-index: 1; width: 100%; max-width: 460px; align-self: flex-start; }
+
+  /* ===== Anneaux lumineux ===== */
+  .ring { position: absolute; inset: -16px; pointer-events: none; }
+  .ring i {
+    position: absolute; inset: 0;
+    border: 2px solid currentColor;
+    filter: drop-shadow(0 0 6px currentColor);
+    animation: morph 7s ease-in-out infinite alternate;
+  }
+  .ring i:nth-child(1) { color: var(--orange); animation-duration: 6s; }
+  .ring i:nth-child(2) { color: var(--sand); inset: -8px; animation-duration: 9s; animation-direction: alternate-reverse; }
+  .ring i:nth-child(3) { color: #ffffff; inset: -14px; animation-duration: 11s; }
+
+  @keyframes morph {
+    0%   { border-radius: 38px 62px 52px 48px / 48px 40px 60px 52px; transform: rotate(-0.7deg); }
+    100% { border-radius: 64px 40px 46px 66px / 40px 62px 44px 60px; transform: rotate(0.7deg); }
+  }
+
+  /* ===== Carte (semi-transparente pour voir l'arbre derrière) ===== */
+  .card {
+    position: relative;
+    background: rgba(12, 10, 16, .6);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,.4);
+  }
+  .banner { width: 100%; height: 200px; object-fit: cover; object-position: center 35%; display: block; }
+  .content { padding: 22px 24px 26px; }
+
+  h1 { text-align: center; margin: 0 0 14px; font-size: 30px; color: var(--sand); text-shadow: 0 0 14px rgba(255,122,47,.6); }
+  .desc { padding-left: 20px; margin: 0 0 16px; line-height: 1.7; color: #f0e4c8; }
+
+  .info {
+    border-left: 4px solid var(--orange);
+    background: rgba(255,122,47,.1);
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    line-height: 1.8;
+  }
+
+  /* ===== Bloc "Places restantes + période" ===== */
+  .reste {
+    text-align: center;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    border-radius: 22px;
+    background: rgba(255,122,47,.15);
+    border: 1.5px solid var(--orange);
+    color: var(--sand);
+    font-weight: bold;
+    line-height: 1.6;
+    box-shadow: 0 0 14px rgba(255,122,47,.4);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .reste small { font-weight: normal; opacity: .85; }
+  @keyframes pulse { 50% { box-shadow: 0 0 24px rgba(255,122,47,.8); } }
+
+  /* ===== Champs en capsule ===== */
+  label { display: block; font-size: 14px; margin: 0 0 4px 10px; color: var(--sand); }
+  input, select {
+    width: 100%;
+    padding: 12px 18px;
+    margin-bottom: 14px;
+    border: 1.5px solid rgba(245,235,208,.6);
+    border-radius: 30px;
+    background: rgba(0,0,0,.15);
+    color: var(--sand);
+    font-size: 15px;
+    outline: none;
+    transition: .2s;
+  }
+  input::placeholder { color: rgba(245,235,208,.5); }
+  select option { background: #14101a; color: var(--sand); }
+  input:focus, select:focus { border-color: var(--orange); box-shadow: 0 0 12px rgba(255,122,47,.5); }
+
+  /* Spécialité verrouillée (Prépa) */
+  select.locked {
+    pointer-events: none;      /* impossible de changer */
+    opacity: .75;
+    border-style: dashed;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  /* ===== Boutons ===== */
+  .btns { display: flex; gap: 10px; }
+  .btns button { flex: 1; }
+  .btns button[type="submit"] { flex: 2; }
+button {
+    padding: 13px;
+    border: 0;
+    border-radius: 30px;
+    background: linear-gradient(90deg, var(--wine), var(--orange));
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 18px rgba(255,122,47,.45);
+    transition: .2s;
+  }
+  button:hover { transform: translateY(-2px); box-shadow: 0 0 26px rgba(255,122,47,.7); }
+  button:disabled { opacity: .6; cursor: wait; }
+
+  button.reset { background: transparent; border: 1.5px solid var(--sand); color: var(--sand); box-shadow: none; }
+  button.reset:hover { background: rgba(245,235,208,.15); box-shadow: none; }
+
+  #msg { text-align: center; margin-top: 12px; font-weight: bold; color: var(--orange); }
+  .center { text-align: center; }
+</style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="ring"><i></i><i></i><i></i></div>
+
+    <div class="card">
+      <!-- Image : adapte le chemin à ton dossier -->
+      <img src="./assse/image2.jpg" alt="TechSquad x Dominox" class="banner">
+
+      <div class="content">
+        <h1>C Unlocked One</h1>
+
+        <ul class="desc">
+          <li>Introduction au langage C pour avoir une idée générale.</li>
+          <li>Les boucles, les conditions et les variables.</li>
+          <li>Les tableaux, les fonctions et les pointeurs.</li>
+        </ul>
+
+        <div class="info">
+          📅 <b>Date :</b> 5 nov<br>
+          ⏱️ <b>Durée :</b> 2 heures (13h - 15h)<br>
+          👨‍🏫 <b>Tuteur :</b> Soufiane Habachi
+        </div>
+
+        <!-- Places restantes + période (rempli par JavaScript) -->
+        <div class="reste" id="reste">Places restantes : ...</div>
+
+        <!-- name = lu par Apps Script -->
+        <form id="myForm">
+          <label>Nom et Prénom</label>
+          <input name="name" placeholder="Nom et Prénom" required>
+
+          <label>Adresse Email</label>
+          <input name="email" type="email" placeholder="exemple@email.com" required>
+
+          <label>Niveau</label>
+          <select name="level" id="level" required>
+            <option value="">Choisir...</option>
+            <option>1ère année</option>
+            <option>2ème année</option>
+            <option>3ème année</option>
+            <option>4ème année</option>
+            <option>5ème année</option>
+          </select>
+
+          <!-- Spécialité : "Prépa" fixe pour 1ère et 2ème année -->
+          <label>Spécialité</label>
+          <select name="speciality" id="speciality" required>
+            <option value="">Choisir...</option>
+            <option value="Prépa">Prépa</option>
+            <option>AUTO</option>
+            <option>ELT</option>
+            <option>ELN</option>
+            <option>GI</option>
+          </select>
+
+          <div class="btns">
+            <button type="submit">S'inscrire au Workshop</button>
+            <button type="reset" class="reset">Reset</button>
+          </div>
+          <div id="msg"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+<script>
+ /* ===== Formulaire ===== */
+  // Colle ici l'URL de l'application web Apps Script (finit par /exec)
+  const SCRIPT_URL ="https://script.google.com/macros/s/AKfycbx8fZF1zAjf37V_w78hyFLHldCZp2QzCvmqbcXDRkFht1UtnXE1xLuPVtSD5N1x6PIhlA/exec";
+
+  // Nombre total de places (affiché si le serveur ne répond pas)
+  const MAX_PLACES = 34;
+
+  const form  = document.getElementById("myForm");
+  const msg   = document.getElementById("msg");
+  const reste = document.getElementById("reste");
+
+  /* ===== Spécialité : "Prépa" fixe pour 1ère et 2ème année ===== */
+  const levelSel = document.getElementById("level");
+  const specSel  = document.getElementById("speciality");
+
+  function toggleSpec() {
+    const lvl   = levelSel.value;
+    const prepa = lvl.startsWith("1") || lvl.startsWith("2");
+
+    Array.from(specSel.options).forEach(o => {
+      if (!o.value) return;
+      const isPrepa = o.value === "Prépa";
+      o.hidden   = prepa ? !isPrepa : isPrepa;
+      o.disabled = prepa ? !isPrepa : isPrepa;
+    });
+
+    if (prepa) {
+      specSel.value = "Prépa";
+      specSel.classList.add("locked");
+      specSel.tabIndex = -1;
+    } else {
+      if (specSel.value === "Prépa") specSel.value = "";
+      specSel.classList.remove("locked");
+      specSel.tabIndex = 0;
+    }
+  }
+  levelSel.addEventListener("change", toggleSpec);
+  form.addEventListener("reset", () => setTimeout(toggleSpec, 0));
+  toggleSpec();
+
+  // Formater une date (ex: 1 novembre, 16:00)
+  function fmt(ms) {
+    return new Date(ms).toLocaleString("fr-FR", {
+      day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"
+    });
+  }
+
+  // Message affiché à la place du formulaire selon l'état
+  function closedHTML(state, d) {
+    let title = "", text = "";
+    if (state === "before") { title = "Inscription pas encore ouverte"; text = "Ouverture : " + fmt(d.openAt); }
+    if (state === "closed") { title = "Inscription terminée";          text = "Merci pour votre intérêt."; }
+    if (state === "full")   { title = "Complet";                       text = "Désolé, il n'y a plus de places."; }
+    return "<h2 class='center'>" + title + "</h2><p class='center'>" + text + "</p>";
+  }
+
+  // Met à jour le bloc "Places restantes"
+  function loadState() {
+    fetch(SCRIPT_URL).then(r => r.json()).then(d => {
+      const period = "Du " + fmt(d.openAt) + " au " + fmt(d.closeAt);
+      if (d.state === "open") {
+        reste.innerHTML = "Places restantes : " + d.left + " / " + d.max +
+                          "<br><small>" + period + "</small>";
+      } else {
+        reste.innerHTML = "Inscrits : " + d.count + " / " + d.max +
+                          "<br><small>" + period + "</small>";
+        form.innerHTML = closedHTML(d.state, d);
+      }
+    }).catch(() => {
+      reste.textContent = "Places restantes : ? / " + MAX_PLACES;
+    });
+  }
+  loadState();
+
+  // À l'envoi
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true;
+
+    fetch(SCRIPT_URL, { method: "POST", body: new FormData(form) })
+      .then(r => r.json())
+      .then(d => {
+        if (d.status === "OK") {
+          msg.textContent = "Inscription confirmée ✅ Vérifie ton email.";
+          form.reset();
+          loadState();
+        } else {
+          loadState();
+        }
+        btn.disabled = false;
+      })
+      .catch(() => {
+        msg.textContent = "Erreur, réessaie.";
+        btn.disabled = false;
+      });
+  });
+</script>
+</body>
+</html>
